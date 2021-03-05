@@ -16,9 +16,22 @@ const buildCss = async (minified, outputDir) => {
   await fs.writeFile(`./${outputDir}/index.css`, `${banner}\n${result.css}`)
 }
 
+const buildTheme = async (minified, outputDir) => {
+  const file = path.resolve(__dirname, '../src/assets/theme.scss')
+
+  const result = await sass.renderSync({
+    file,
+  })
+
+  await fs.ensureDir(`./${outputDir}`)
+
+  await fs.writeFile(`./${outputDir}/theme.css`, `${banner}\n${result.css}`)
+}
+
 module.exports = async (outputDir) => {
   const env = process.env.NODE_ENV || 'development'
   await buildCss(env !== 'development', outputDir)
+  await buildTheme(env !== 'development', outputDir)
   if (env === 'development') {
     return
   }

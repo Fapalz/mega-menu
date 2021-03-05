@@ -1,5 +1,5 @@
 module.exports = {
-  name: 'MyLibrary',
+  name: 'MegaMenu',
   outputName: 'index',
-  external: [],
+  external: ['@fapalz/utils/src/utils/transition'],
 }
