@@ -1,10 +1,9 @@
 {
   "name": "@fapalz/mega-menu",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "GitHub template for starting new projects",
   "main": "./package/index.js",
   "module": "./package/index.es.js",
-  "private": "false",
   "scss": "package/assets/index.scss",
   "css": "package/index.css",
   "scripts": {

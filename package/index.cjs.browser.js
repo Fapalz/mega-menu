@@ -1,5 +1,5 @@
 /**
- * MegaMenu  1.0.0
+ * MegaMenu  1.1.0
  * GitHub template for starting new projects
  * https://github.com/Fapalz/mega-menu#readme
  *
@@ -7,7 +7,7 @@
  *
  * Released under the MIT License
  *
- * Released on: March 5, 2021
+ * Released on: December 14, 2021
  */
 
 'use strict';
@@ -149,16 +149,30 @@ function whenTransitionEnds(el, expectedType, cb) {
   return el;
 }
 
+var isDomElement = function isDomElement(obj) {
+  return !!(obj && obj.nodeType === 1);
+};
+
 var MegaMenu = /*#__PURE__*/function () {
   function MegaMenu(element, options) {
     var _this = this;
 
-    this.options = MegaMenu.mergeSettings(options);
-    this.element = typeof element === 'string' ? document.querySelector(element) : element;
-    ['openHandler', 'backHandler'].forEach(function (method) {
-      _this[method] = _this[method].bind(_this);
-    });
-    this.init();
+    try {
+      this.options = MegaMenu.mergeSettings(options);
+      this.element = typeof element === 'string' ? document.querySelector(element) : element;
+
+      if (!isDomElement(this.element)) {
+        throw new Error('Element shold be is ELEMENT_NODE, check your parameter');
+      }
+
+      ;
+      ['openHandler', 'closeHandler'].forEach(function (method) {
+        _this[method] = _this[method].bind(_this);
+      });
+      this.init();
+    } catch (error) {
+      console.error(error);
+    }
   }
   /**
    * Overrides default settings with custom ones.
@@ -173,7 +187,15 @@ var MegaMenu = /*#__PURE__*/function () {
       dataContainer: 'data-mega-container',
       dataList: 'data-mega-list',
       dataItem: 'data-mega-item',
-      dataLink: 'data-mega-link'
+      dataLink: 'data-mega-link',
+      // Events
+      init: function init() {},
+      openTransitionStart: function openTransitionStart() {},
+      openTransitionEnd: function openTransitionEnd() {},
+      closeTransitionStart: function closeTransitionStart() {},
+      closeTransitionEnd: function closeTransitionEnd() {},
+      beforeDestroy: function beforeDestroy() {},
+      destroy: function destroy() {}
     };
     var userSttings = Object.keys(options);
     userSttings.forEach(function (name) {
@@ -185,22 +207,24 @@ var MegaMenu = /*#__PURE__*/function () {
   var _proto = MegaMenu.prototype;
 
   _proto.attachEvents = function attachEvents() {
-    var _this2 = this;
+    // const links = this.element.querySelectorAll(`[${this.options.dataLink}]`)
+    this.element.addEventListener('click', this.openHandler);
+    this.element.addEventListener('click', this.closeHandler);
+  };
 
-    var links = this.element.querySelectorAll("[" + this.options.dataLink + "]");
-    links.forEach(function (element) {
-      element.addEventListener('click', _this2.openHandler);
-    });
-    this.element.addEventListener('click', this.backHandler);
+  _proto.detachEvents = function detachEvents() {
+    this.element.removeEventListener('click', this.openHandler);
+    this.element.removeEventListener('click', this.closeHandler);
   };
 
   _proto.openHandler = function openHandler(e) {
+    if (!e.target.closest("[" + this.options.dataLink + "]")) return;
     e.preventDefault();
-    var element = e.currentTarget;
+    var element = e.target.closest("[" + this.options.dataLink + "]");
     this.openItem(element);
   };
 
-  _proto.backHandler = function backHandler(e) {
+  _proto.closeHandler = function closeHandler(e) {
     if (!e.target.closest("[" + this.options.dataBackBtn + "]")) return;
     e.preventDefault();
     var length = this.openItems.length;
@@ -209,7 +233,16 @@ var MegaMenu = /*#__PURE__*/function () {
       return;
     }
 
-    this.closeItem(this.openItems[length - 1]);
+    this.closeItem();
+  };
+
+  _proto.getScroll = function getScroll() {
+    return this.element.scrollTop;
+  };
+
+  _proto.updateScroll = function updateScroll(scroll) {
+    this.element.scrollTop = scroll;
+    return scroll;
   };
 
   _proto.updateHeight = function updateHeight() {
@@ -223,10 +256,12 @@ var MegaMenu = /*#__PURE__*/function () {
   };
 
   _proto.openItem = function openItem(element) {
+    var _this2 = this;
+
     var item = element.parentElement;
     var list = item.closest("[" + this.options.dataList + "]");
     var subMenu = item.querySelector("[" + this.options.dataList + "]");
-    var scroll = this.element.scrollTop;
+    var scroll = this.getScroll();
 
     if (list && item && !item.classList.contains('is-animation')) {
       item.classList.add('is-active', 'is-animation');
@@ -238,30 +273,41 @@ var MegaMenu = /*#__PURE__*/function () {
         link: element,
         scroll: scroll
       });
-      this.updateHeight();
+      this.options.openTransitionStart.call(this, item, this);
+      whenTransitionEnds(list, '', function () {
+        _this2.updateHeight();
+
+        _this2.updateScroll(0);
+
+        _this2.options.openTransitionEnd.call(_this2, item, _this2);
+      });
     }
 
     return this.openItems;
   };
 
-  _proto.closeItem = function closeItem(current) {
+  _proto.closeItem = function closeItem() {
     var _this3 = this;
 
-    var item = current.item;
-    var list = current.list;
+    if (this.openItems.length) {
+      var current = this.openItems[this.openItems.length - 1];
+      var item = current.item,
+          list = current.list;
 
-    if (list && window.parent) {
-      item.classList.remove('is-active');
-      list.classList.remove('is-active');
-      var scroll = this.openItems[this.openItems.length - 1].scroll;
-      this.openItems.pop();
-      whenTransitionEnds(list, '', function () {
-        item.classList.remove('is-animation');
+      if (list && window.parent) {
+        item.classList.remove('is-active');
+        list.classList.remove('is-active');
+        var scroll = current.scroll;
+        this.openItems.pop();
+        this.updateHeight();
+        this.updateScroll(scroll);
+        this.options.closeTransitionStart.call(this, item, this);
+        whenTransitionEnds(list, '', function () {
+          item.classList.remove('is-animation');
 
-        _this3.updateHeight();
-
-        _this3.element.scrollTop = scroll;
-      });
+          _this3.options.closeTransitionEnd.call(_this3, item, _this3);
+        });
+      }
     }
 
     return this.openItems;
@@ -271,8 +317,16 @@ var MegaMenu = /*#__PURE__*/function () {
     var index = this.openItems.length; // eslint-disable-next-line no-plusplus
 
     while (index--) {
-      this.closeItem(this.openItems[this.openItems.length - 1]);
+      this.closeItem();
     }
+  };
+
+  _proto.destroy = function destroy() {
+    this.options.beforeDestroy.call(this, this);
+    this.closeAllItems();
+    this.detachEvents();
+    this.isInit = false;
+    this.options.destroy.call(this, this);
   }
   /**
    * Init navigation
@@ -288,6 +342,7 @@ var MegaMenu = /*#__PURE__*/function () {
     this.openItems = [];
     this.attachEvents();
     this.isInit = true;
+    this.options.init.call(this, this);
   };
 
   return MegaMenu;

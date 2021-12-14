@@ -1,15 +1,26 @@
 import { whenTransitionEnds } from '@fapalz/utils/src/utils/transition'
+import { isDomElement } from '@fapalz/utils/src/utils/index'
 
 export default class MegaMenu {
   constructor(element, options) {
-    this.options = MegaMenu.mergeSettings(options)
-    this.element =
-      typeof element === 'string' ? document.querySelector(element) : element
-    ;['openHandler', 'backHandler'].forEach((method) => {
-      this[method] = this[method].bind(this)
-    })
+    try {
+      this.options = MegaMenu.mergeSettings(options)
+      this.element =
+        typeof element === 'string' ? document.querySelector(element) : element
 
-    this.init()
+      if (!isDomElement(this.element)) {
+        throw new Error(
+          'Element shold be is ELEMENT_NODE, check your parameter'
+        )
+      }
+      ;['openHandler', 'closeHandler'].forEach((method) => {
+        this[method] = this[method].bind(this)
+      })
+
+      this.init()
+    } catch (error) {
+      console.error(error)
+    }
   }
 
   /**
@@ -24,6 +35,15 @@ export default class MegaMenu {
       dataList: 'data-mega-list',
       dataItem: 'data-mega-item',
       dataLink: 'data-mega-link',
+
+      // Events
+      init: () => {},
+      openTransitionStart: () => {},
+      openTransitionEnd: () => {},
+      closeTransitionStart: () => {},
+      closeTransitionEnd: () => {},
+      beforeDestroy: () => {},
+      destroy: () => {},
     }
 
     const userSttings = Object.keys(options)
@@ -36,21 +56,25 @@ export default class MegaMenu {
   }
 
   attachEvents() {
-    const links = this.element.querySelectorAll(`[${this.options.dataLink}]`)
-    links.forEach((element) => {
-      element.addEventListener('click', this.openHandler)
-    })
+    // const links = this.element.querySelectorAll(`[${this.options.dataLink}]`)
+    this.element.addEventListener('click', this.openHandler)
+    this.element.addEventListener('click', this.closeHandler)
+  }
 
-    this.element.addEventListener('click', this.backHandler)
+  detachEvents() {
+    this.element.removeEventListener('click', this.openHandler)
+    this.element.removeEventListener('click', this.closeHandler)
   }
 
   openHandler(e) {
+    if (!e.target.closest(`[${this.options.dataLink}]`)) return
+
     e.preventDefault()
-    const element = e.currentTarget
+    const element = e.target.closest(`[${this.options.dataLink}]`)
     this.openItem(element)
   }
 
-  backHandler(e) {
+  closeHandler(e) {
     if (!e.target.closest(`[${this.options.dataBackBtn}]`)) return
 
     e.preventDefault()
@@ -58,7 +82,16 @@ export default class MegaMenu {
     if (length === 0) {
       return
     }
-    this.closeItem(this.openItems[length - 1])
+    this.closeItem()
+  }
+
+  getScroll() {
+    return this.element.scrollTop
+  }
+
+  updateScroll(scroll) {
+    this.element.scrollTop = scroll
+    return scroll
   }
 
   updateHeight() {
@@ -75,7 +108,7 @@ export default class MegaMenu {
     const item = element.parentElement
     const list = item.closest(`[${this.options.dataList}]`)
     const subMenu = item.querySelector(`[${this.options.dataList}]`)
-    const scroll = this.element.scrollTop
+    const scroll = this.getScroll()
 
     if (list && item && !item.classList.contains('is-animation')) {
       item.classList.add('is-active', 'is-animation')
@@ -88,27 +121,39 @@ export default class MegaMenu {
         link: element,
         scroll,
       })
-      this.updateHeight()
+
+      this.options.openTransitionStart.call(this, item, this)
+
+      whenTransitionEnds(list, '', () => {
+        this.updateHeight()
+        this.updateScroll(0)
+        this.options.openTransitionEnd.call(this, item, this)
+      })
     }
 
     return this.openItems
   }
 
-  closeItem(current) {
-    const { item } = current
-    const { list } = current
+  closeItem() {
+    if (this.openItems.length) {
+      const current = this.openItems[this.openItems.length - 1]
 
-    if (list && window.parent) {
-      item.classList.remove('is-active')
-      list.classList.remove('is-active')
-      const { scroll } = this.openItems[this.openItems.length - 1]
-      this.openItems.pop()
+      const { item, list } = current
 
-      whenTransitionEnds(list, '', () => {
-        item.classList.remove('is-animation')
+      if (list && window.parent) {
+        item.classList.remove('is-active')
+        list.classList.remove('is-active')
+        const { scroll } = current
+        this.openItems.pop()
         this.updateHeight()
-        this.element.scrollTop = scroll
-      })
+        this.updateScroll(scroll)
+        this.options.closeTransitionStart.call(this, item, this)
+
+        whenTransitionEnds(list, '', () => {
+          item.classList.remove('is-animation')
+          this.options.closeTransitionEnd.call(this, item, this)
+        })
+      }
     }
 
     return this.openItems
@@ -118,8 +163,16 @@ export default class MegaMenu {
     let index = this.openItems.length
     // eslint-disable-next-line no-plusplus
     while (index--) {
-      this.closeItem(this.openItems[this.openItems.length - 1])
+      this.closeItem()
     }
+  }
+
+  destroy() {
+    this.options.beforeDestroy.call(this, this)
+    this.closeAllItems()
+    this.detachEvents()
+    this.isInit = false
+    this.options.destroy.call(this, this)
   }
 
   /**
@@ -137,5 +190,6 @@ export default class MegaMenu {
 
     this.attachEvents()
     this.isInit = true
+    this.options.init.call(this, this)
   }
 }
