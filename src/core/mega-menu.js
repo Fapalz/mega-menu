@@ -104,6 +104,17 @@ export default class MegaMenu {
     }
   }
 
+  updateHeightBeforeOpen() {
+    if (this.openItems.length) {
+      const current = this.openItems[this.openItems.length - 1]
+      const height = Math.max(
+        this.element.offsetHeight,
+        current.list.offsetHeight
+      )
+      this.innerContainer.style.height = `${height}px`
+    }
+  }
+
   openItem(element) {
     const item = element.parentElement
     const list = item.closest(`[${this.options.dataList}]`)
@@ -121,12 +132,12 @@ export default class MegaMenu {
         link: element,
         scroll,
       })
-
+      this.updateHeightBeforeOpen()
+      this.updateScroll(0)
       this.options.openTransitionStart.call(this, item, this)
 
       whenTransitionEnds(list, '', () => {
         this.updateHeight()
-        this.updateScroll(0)
         this.options.openTransitionEnd.call(this, item, this)
       })
     }

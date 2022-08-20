@@ -1,13 +1,13 @@
 /**
- * MegaMenu  1.1.0
+ * MegaMenu  1.1.1
  * GitHub template for starting new projects
  * https://github.com/Fapalz/mega-menu#readme
  *
- * Copyright 2020-2021 Gladikov Kirill - Fapalz <blacesmot@gmail.com>
+ * Copyright 2020-2022 Gladikov Kirill - Fapalz <blacesmot@gmail.com>
  *
  * Released under the MIT License
  *
- * Released on: December 14, 2021
+ * Released on: August 20, 2022
  */
 
 import { whenTransitionEnds } from '@fapalz/utils/src/utils/transition';
@@ -118,6 +118,14 @@ var MegaMenu = /*#__PURE__*/function () {
     }
   };
 
+  _proto.updateHeightBeforeOpen = function updateHeightBeforeOpen() {
+    if (this.openItems.length) {
+      var current = this.openItems[this.openItems.length - 1];
+      var height = Math.max(this.element.offsetHeight, current.list.offsetHeight);
+      this.innerContainer.style.height = height + "px";
+    }
+  };
+
   _proto.openItem = function openItem(element) {
     var _this2 = this;
 
@@ -136,11 +144,11 @@ var MegaMenu = /*#__PURE__*/function () {
         link: element,
         scroll: scroll
       });
+      this.updateHeightBeforeOpen();
+      this.updateScroll(0);
       this.options.openTransitionStart.call(this, item, this);
       whenTransitionEnds(list, '', function () {
         _this2.updateHeight();
-
-        _this2.updateScroll(0);
 
         _this2.options.openTransitionEnd.call(_this2, item, _this2);
       });
