@@ -104,11 +104,11 @@ export default class MegaMenu {
     }
   }
 
-  updateHeightBeforeOpen() {
+  updateHeightBefore() {
     if (this.openItems.length) {
       const current = this.openItems[this.openItems.length - 1]
       const height = Math.max(
-        this.element.offsetHeight,
+        current.subMenu.offsetHeight,
         current.list.offsetHeight
       )
       this.innerContainer.style.height = `${height}px`
@@ -132,7 +132,8 @@ export default class MegaMenu {
         link: element,
         scroll,
       })
-      this.updateHeightBeforeOpen()
+
+      this.updateHeightBefore()
       this.updateScroll(0)
       this.options.openTransitionStart.call(this, item, this)
 
@@ -155,12 +156,13 @@ export default class MegaMenu {
         item.classList.remove('is-active')
         list.classList.remove('is-active')
         const { scroll } = current
+        this.updateHeightBefore()
         this.openItems.pop()
-        this.updateHeight()
         this.updateScroll(scroll)
         this.options.closeTransitionStart.call(this, item, this)
 
         whenTransitionEnds(list, '', () => {
+          this.updateHeight()
           item.classList.remove('is-animation')
           this.options.closeTransitionEnd.call(this, item, this)
         })

@@ -1,5 +1,5 @@
 /**
- * MegaMenu  1.1.1
+ * MegaMenu  1.1.2
  * GitHub template for starting new projects
  * https://github.com/Fapalz/mega-menu#readme
  *
@@ -7,7 +7,7 @@
  *
  * Released under the MIT License
  *
- * Released on: August 20, 2022
+ * Released on: August 22, 2022
  */
 
 (function (global, factory) {
@@ -259,10 +259,10 @@
       }
     };
 
-    _proto.updateHeightBeforeOpen = function updateHeightBeforeOpen() {
+    _proto.updateHeightBefore = function updateHeightBefore() {
       if (this.openItems.length) {
         var current = this.openItems[this.openItems.length - 1];
-        var height = Math.max(this.element.offsetHeight, current.list.offsetHeight);
+        var height = Math.max(current.subMenu.offsetHeight, current.list.offsetHeight);
         this.innerContainer.style.height = height + "px";
       }
     };
@@ -285,7 +285,7 @@
           link: element,
           scroll: scroll
         });
-        this.updateHeightBeforeOpen();
+        this.updateHeightBefore();
         this.updateScroll(0);
         this.options.openTransitionStart.call(this, item, this);
         whenTransitionEnds(list, '', function () {
@@ -310,11 +310,13 @@
           item.classList.remove('is-active');
           list.classList.remove('is-active');
           var scroll = current.scroll;
+          this.updateHeightBefore();
           this.openItems.pop();
-          this.updateHeight();
           this.updateScroll(scroll);
           this.options.closeTransitionStart.call(this, item, this);
           whenTransitionEnds(list, '', function () {
+            _this3.updateHeight();
+
             item.classList.remove('is-animation');
 
             _this3.options.closeTransitionEnd.call(_this3, item, _this3);
